@@ -81,6 +81,33 @@ public:
         return false;
     }
 
+    bool LoadString(const std::string &code) {
+        std::string file = "<from_string>";
+        int status = luaL_loadstring(_l, code.c_str());
+#if LUA_VERSION_NUM >= 502
+        if (status != LUA_OK) {
+#else
+        if (status != 0) {
+#endif
+            if (status == LUA_ERRSYNTAX) {
+                const char *msg = lua_tostring(_l, -1);
+                _print(msg ? msg : (file + ": syntax error").c_str());
+            } else if (status == LUA_ERRFILE) {
+                const char *msg = lua_tostring(_l, -1);
+                _print(msg ? msg : (file + ": file error").c_str());
+            }
+            lua_remove(_l , -1);
+            return false;
+        }
+        if (!lua_pcall(_l, 0, LUA_MULTRET, 0))
+            return true;
+
+        const char *msg = lua_tostring(_l, -1);
+        _print(msg ? msg : (file + ": dofile failed").c_str());
+        lua_remove(_l, -1);
+        return false;
+    }
+
     void OpenLib(const std::string& modname, lua_CFunction openf) {
 #if LUA_VERSION_NUM >= 502
         luaL_requiref(_l, modname.c_str(), openf, 1);
